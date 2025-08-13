@@ -8,6 +8,10 @@ import { player } from "./player.js";
 import { teamNamePrettier } from "./util.js";
 import { parse } from "json2csv"
 
+// Helper function to add delays between requests
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 /**
  * Get each team's URL.
@@ -26,7 +30,18 @@ async function getPlayersUrlsFromEachTeam(team) {
 
   const options = {
     headers: {
-      "User-Agent": "request",
+      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+      "Accept-Language": "en-US,en;q=0.9",
+      "Accept-Encoding": "gzip, deflate, br",
+      "DNT": "1",
+      "Connection": "keep-alive",
+      "Upgrade-Insecure-Requests": "1",
+      "Sec-Fetch-Dest": "document",
+      "Sec-Fetch-Mode": "navigate",
+      "Sec-Fetch-Site": "none",
+      "Sec-Fetch-User": "?1",
+      "Cache-Control": "max-age=0"
     },
   };
 
@@ -58,7 +73,18 @@ async function getPlayersUrlsFromEachTeam(team) {
 async function getPlayerDetail(team, playerUrl) {
   const options = {
     headers: {
-      "User-Agent": "request",
+      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+      "Accept-Language": "en-US,en;q=0.9",
+      "Accept-Encoding": "gzip, deflate, br",
+      "DNT": "1",
+      "Connection": "keep-alive",
+      "Upgrade-Insecure-Requests": "1",
+      "Sec-Fetch-Dest": "document",
+      "Sec-Fetch-Mode": "navigate",
+      "Sec-Fetch-Site": "none",
+      "Sec-Fetch-User": "?1",
+      "Cache-Control": "max-age=0"
     },
   };
 
@@ -272,12 +298,12 @@ const main = async function () {
   var players = [];
 
   console.log("################ Fetching player urls ... ################");
-  await Promise.all(
-    teams.map(async (team) => {
-      let playerUrls = await getPlayersUrlsFromEachTeam(team);
-      roster.set(team, playerUrls);
-    })
-  );
+  for (let team of teams) {
+    let playerUrls = await getPlayersUrlsFromEachTeam(team);
+    roster.set(team, playerUrls);
+    // Add delay between team requests to avoid overwhelming the server
+    await delay(1000);
+  }
 
   console.log("################ Fetching player details ... ################");
   for (let team of teams) {
@@ -286,13 +312,14 @@ const main = async function () {
 
     console.log(`---------- ${prettiedTeamName} ----------`);
 
-    await Promise.all(
-      playerUrls.map(async (playerUrl) => {
-        let player = await getPlayerDetail(prettiedTeamName, playerUrl);
-        players.push(player);
-        console.log(`Successfully fetched ${player.name}'s detail.`);
-      })
-    );
+    // Process players sequentially with delays to avoid rate limiting
+    for (let playerUrl of playerUrls) {
+      let player = await getPlayerDetail(prettiedTeamName, playerUrl);
+      players.push(player);
+      console.log(`Successfully fetched ${player.name}'s detail.`);
+      // Add delay between player requests
+      await delay(500);
+    }
   }
 
   let teamResult = [...players].sort(sortPlayersWithTeamGroupBy);
